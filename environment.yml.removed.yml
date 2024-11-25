@@ -1,0 +1,25 @@
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - r-base # whatever version
+  - r-irkernel
+  conda install -c conda-forge r-geojsonio
+  conda install -c conda-forge r-sf
+  
+  # and all your other leaf r- dependencies
+  - r-sf
+  - r-tufte
+  - r-ggplot2
+  - r-readxl
+  - r-plotly
+#install.packages(reshape2)
+  - r-gtools
+#install.packages(MASS
+#install.packages(ggridges)
+  - r-pracma
+  - r-viridis
+  - r-colorspace
+  - r-dplyr
+  - r-tidyr
+  - r-sf

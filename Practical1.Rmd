@@ -1,0 +1,288 @@
+---
+title: 'Practical 21: Alkalinity, DIC and carbonate speciation'
+author: "ETT"
+date: "`r Sys.Date()`"
+output: 
+  tint::tintPdf:
+    keep_tex: TRUE
+    extra_dependencies: ["mhchem"]
+classoption: x11names
+fig_caption: yes
+toc: no
+link-citations: yes
+bibliography: 
+  EnhancedweatheringPrac.bib
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+library(ggplot2)
+library(readxl)
+library(plotly)
+library(reshape2)
+library(gtools)
+library(MASS)
+library(ggridges)
+library(pracma)
+library(viridis)
+library(colorspace)
+library(dplyr)
+library(tidyr)
+library(sf)
+
+#library(formatR)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, echo = FALSE, cache=FALSE)
+options(htmltools.dir.version = FALSE)
+
+```
+
+\newcommand{\mathalert}[1]{\textcolor{red}{\mathbf{#1}}}
+
+
+\marginnote{This is an R markdown document.  It is similar to a jupyter notebook that you might be more familiar with.  You can both explore the code, and also compile the final document to pdf output.  This should provide you with some familiarisation of "R", as well as the science.}
+
+\noindent Carbon is one of the most important constituents of nearly all waters.  It can be present as both dissolved organic carbon (DOC) and dissolved inorganic carbon (DIC).  By the end of this practical, you should have determined experimentally the alkalinity of a natural mineral water (Evian, Volvic, Buxton, Highland Spring) and constructed the carbonate speciation diagram as a function of pH (referred to as either the Bjerrum or Sillen diagram). This should give you a solid understanding of dissolved inorganic carbon.  The practical is divided into two halves.  The first half, involves wet chemistry and can only be done with a relatively limited set of equipment.  The second half is calculation based.  You are encouraged to plot the results using a computer.
+
+# Section 1:  Alkalinity of a mineral water using the GRAN method.
+
+You are provided with:
+\begin{enumerate}
+\item 0.05M HCl
+\item Safety Specs
+<!-- %\item A digital titrator with acid syringe and U-tube -->
+\item A set of pipettes and pipette tips.
+\item A pH meter
+\item An Erlenmeyer flask
+\item A mineral water
+\item A beaker
+\end{enumerate}
+
+\noindent SAFETY NOTE: 0.05M Hydrochloric acid is not harmful on skin contact, unless the skin is already damaged in which case it will sting.  Avoid contact with eyes and wear safety specs.  It may damage/stain clothes.
+
+# TASK: Get into a pair and choose a mineral water.
+# TASK: Measure out precisely 50ml of mineral water into the Erlenmeyer flask.
+# TASK: Pour the 50ml of mineral water into the beaker.
+# TASK: Check with a demonstrator how to use the pipette correctly. 
+<!-- ## Check with a demonstrator how to use the pipette correctly.  %Note the units of the digital titrator ca be converted to $\mu L$ by multiplying the displayed number by 1.2. -->
+# TASK: Remove the cap from the pH meter and rinse the probe to remove any of the storage solution.
+# TASK: Take the pH of the mineral water.  This will be the starting pH for the titration.
+# TASK: Use the pipette to dispense acid into the mineral water, noting the volume dispensed and the pH at each step.  Aim to decrease the pH of the mineral water by $\sim$ 0.1 pH units at each step.  Note that the amount of acid required to do this will change depending on 1) the alkalinity of the solution and 2) the amount of HCl that has already been added to the mineral water. Continue this process until the pH of the water has decreased to $\sim$ 3.5.  Expect this to take 30 minutes.
+# TASK: Plot a graph of the data, with volume on the y-axis, and pH on the x-axis. Your graph should look similar to Fig. 1.
+# TASK: Use your graph to estimate the volume of the equivalent point, where the activity of the hydrogen ion is equal to that of the \ce{HCO3-} ion.
+# TASK: Compute the Gran function $(V_0+v)\times 10^{-pH}$ and plot a graph of the Gran function (y-axis) against volume of acid added (x-axis).
+# TASK: Use the graph of the Gran function to determine the volume of acid added at the equivalent point.  Your graph should look similar to Fig. 2.
+# TASK: Determine the alkanity of the water using the formula: $alc_o = \frac{v_e\times N}{V_o}$
+# TASK: Compare the alkalinity you have determined with the stated value on the label of the mineral water bottle.  Caution with units.
+
+
+```{r Read in specimen titration data, echo=FALSE, include=FALSE}
+#Define what to do if there is missing data
+na_strings <- c("NA", "n.d.", "N/A", "na","n.a.","","-","–","-9999","NAN")
+#Define a filename
+filename<-"Titration example.xlsx"
+#Read in the data from xlsx
+titration<-read_excel(filename, na = na_strings, skip=0, sheet="Sheet1", col_names = TRUE)
+```
+
+```{r Plot formatting, echo=FALSE, include=FALSE}
+# Define white theme (handouts) ------------------------------------------------------
+theme_white = function(base_size = 18, base_family = "") {
+  
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    
+    theme(
+      # Specify axis options
+      axis.line = element_blank(),  
+      axis.text.x = element_text(size = base_size*0.8, color = "black", lineheight = 0.9, face = "bold"),  
+      axis.text.y = element_text(size = base_size*0.8, color = "black", lineheight = 0.9, face = "bold"),  
+      axis.ticks = element_line(color = "black", size  =  0.2),  
+      axis.title.x = element_text(size = base_size, color = "black", margin = margin(0, 10, 0, 0), face = "bold"),  
+      axis.title.y = element_text(size = base_size, color = "black", angle = 90, margin = margin(0, 10, 0, 0), face = "bold"),  
+      axis.ticks.length = unit(0.3, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "white"),  
+      legend.key = element_rect(color = "black",  fill = "white"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*0.8, color = "black"),  
+      legend.title = element_text(size = base_size*0.8, face = "bold", hjust = 0, color = "black"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background = element_rect(fill = "white", color  =  NA),  
+      panel.border = element_rect(fill = NA, color = "black"),  
+      panel.grid.major = element_line(color = "grey35", size=0.1),  
+      panel.grid.minor = element_line(color = "grey20", size=0.1),  
+      panel.margin = unit(0.5, "lines"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "grey30", color = "grey10"),  
+      strip.text.x = element_text(size = base_size*0.8, color = "black"),  
+      strip.text.y = element_text(size = base_size*0.8, color = "black",angle = -90),  
+      # Specify plot options
+      plot.background = element_rect(color = "white", fill = "white"),  
+      plot.title = element_text(size = base_size*1.2, color = "black"),  
+      plot.margin = unit(rep(1, 4), "lines")
+      
+    )
+  
+}
+```
+
+```{r, fig.margin = TRUE, warning=FALSE, fig.pos = "-15cm", fig.cap="Example graph of titration curve.  Your waters should have a much less alkaline starting point."}
+ggplot(NULL) +                     
+  geom_point(data=titration, aes(x=pH, y=Vol), color="black", size=3)+
+  theme_white()+
+  theme(legend.position="none")+
+  scale_x_continuous(limits=c(3,12), breaks=seq(3,12, by=1))+
+  scale_y_continuous(limits=c(0,2500),
+                     # Features of the first axis
+                     name = "Vol Added"
+  )
+```
+
+```{r Compute the Gran function, echo=FALSE, include=FALSE}
+titration<-titration%>%mutate(Gran=(50+1.2*Vol/1000)*10^-pH)
+```
+
+
+```{r, fig.margin = TRUE, warning=FALSE, fig.pos = "-5cm", fig.cap="Example of a Gran plot.  Use the x-intercept of the linear region to determine the equivalent point"}
+ggplot(NULL) +                     
+  geom_point(data=titration, aes(x=Vol, y=Gran), color="black", size=3)+
+  theme_white()+
+  theme(legend.position="none")+
+  scale_y_continuous(
+                     # Features of the first axis
+                     name = "Gran function"
+  )
+```
+
+# Section 2:  Carbonate equilibria
+
+The carbonate system can be characterised by the following two chemical equilibria:
+\begin{equation}\label{carb1}
+H_2CO_3 \rightleftharpoons H^+\;+\; HCO_3^-
+\end{equation}
+
+\begin{equation}\label{carb2}
+HCO_{3}^{-}\rightleftharpoons H^{+}+CO_{3}^{2-}
+\end{equation}
+
+# TASK: Write down expressions for the equilibrium constants for the two reactions.  These are referred to as K1 ansd K2 respectively.
+
+\marginnote{At 25\textcelsius the numerical values of K1 and K2 are:  
+\newline\noindent K$_{1}$=4 10$^{-7}$
+\newline\noindent K$_{2}$=4 10$^{-11}$ }
+
+# TASK: Write down an an expression for the DIC as a function of the main carbonate species \ce{H2CO3}, \ce{HCO3-} and \ce{CO3}.
+
+You should now have three equations and three variables, \ce{H2CO3}, \ce{HCO3-} and \ce{CO3} in addition to DIC and the concentration of hydrogen ions.  In a conservative system, the DIC will remain constant and is independent of changes in pH.
+
+
+# TASK:   Derive an expression for \ce{H2CO3} as  a function of DIC and pH, recalling that $pH=-log10 H^+$.
+# TASK:   Derive an expression for \ce{HCO3-} as  a function of DIC and pH, recalling that $pH=-log10 H^+$.
+# TASK:   Derive an expression for \ce{CO_3^{2-}} as  a function of DIC and pH, recalling that $pH=-log10 H^+$.
+# TASK:   Defining alkalinity as the sum of \ce{HCO3-} and \ce{CO_3^{2-}} use your expressions to determine the DIC of the mineral water that you titrated in section 1 (This can be done later if you haven't yet done the titration).
+# TASK:   Using your value of DIC, use you expressions to plot the Bjerrum diagram.  You are strongly advised to use a computer for this.   Your final graph should look similar to Fig. 3.
+
+
+```{r Do all Bjerrum calcs, echo=FALSE, include=FALSE}
+#pH 
+
+pH <- seq(from = 2, to = 14, by = 0.05)
+
+#Hydrogen ion conc (mol kg-1)
+
+H <- 10^-pH  #pH=-log10 H
+
+#DIC (mol Kg -1) 
+
+DIC <- 2.43*10^-3
+
+#Temperature (Kelvin)
+
+temp <- 298.15
+
+# Equilibrium constants for freshwaters, calculated as a function of T
+
+K1 <- 10^-((3404.71/temp) + (0.032786*temp) - 14.8435) 
+
+K2 <- 10^-((2902.39/temp) + (0.02379*temp) - 6.4980)
+
+
+
+
+### CALCULATE H2CO3 ###
+
+calculate_H2CO3 <- function(H, DIC, K1, K2) {
+  H2CO3 <- DIC/(1+ ((K1/H) + (K1*K2/H^2)))
+  return(H2CO3)
+}
+
+
+H2CO3 <- calculate_H2CO3(H, DIC, K1, K2)
+
+
+### CALCULATE HCO3- ###
+
+calculate_HCO3 <- function(H, DIC, K1, K2) {
+  HCO3 <- DIC/(1+ ((H/K1) + (K2/H)))
+  return(HCO3)
+}
+HCO3 <- calculate_HCO3(H, DIC, K1, K2)
+
+
+
+### CALCULATE CO3- ###
+
+calculate_CO3 <- function(H, DIC, K1, K2) {
+  CO3 <- DIC/(1+ ((H/K2) + (H^2/K1*K2)))
+  return(CO3)
+}
+CO3 <- calculate_CO3(H, DIC, K1, K2)
+
+
+
+### CALCULATE CARBONATE ALKALINITY ###
+
+alk <- function(CO3, HCO3) {
+  CA = HCO3 + 2*CO3
+  return(CA)
+}
+
+ALK <- alk(CO3, HCO3)
+
+
+#DIC then sum of all carbonate components 
+
+DIC_check <- H2CO3 + HCO3 + CO3
+
+
+#Calculate OH ion
+
+pOH=14-pH
+
+carbonate_species <- data.frame(pH, H2CO3, CO3, HCO3, pOH, ALK, DIC, DIC_check)
+```
+
+
+
+
+```{r,  warning=FALSE, fig.width = 20, fig.height = 10, fig.cap="Example of the Bjerrum or Silen diagram"}
+ggplot(NULL)+ 
+  geom_line(data = carbonate_species, aes(x = pH, y = CO3, col = "CO3"), size=1) +
+  geom_line(data = carbonate_species, aes(x = pH, y = HCO3, col = "HCO3"), size=1) +
+  geom_line(data = carbonate_species, aes(x = pH, y = H2CO3, col = "H2CO3"), size=1) +
+  #The pH is equal to −log10 c
+  geom_line(data = carbonate_species, aes(x = pH, y = 10^(-pH), col = "pH"), size=1) +
+  geom_line(data = carbonate_species, aes(x = pH, y = 10^(-pOH), col = "OH"), size=1) +
+  scale_y_continuous(limits=c(0.00001,0.006), name="concentration of species (mol kg-1)", trans="log10")+
+  scale_x_continuous(limits=c(2,12), breaks=seq(2,12, by=1))+
+  theme_white()
+  
+```
+
