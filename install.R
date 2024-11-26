@@ -11,6 +11,6 @@ install.packages(viridis)
 install.packages(colorspace)
 install.packages(dplyr)
 install.packages(tidyr)
-install.packages("sf")
+install.packages(sf)
 
 
