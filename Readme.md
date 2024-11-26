@@ -1,4 +1,4 @@
-# Part1B_ESA_P21
+# test-practical
 
 RStudio: [![Binder](http://mybinder.org/badge_logo.svg)](http://mybinder.org/v2/gh/ett20/test-practical/main?urlpath=rstudio)
 
